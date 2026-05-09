@@ -20,7 +20,7 @@ class Editor : JComponent(),
     private var scrollY = 0
 
     companion object {
-        const val PADDING = 16
+        const val PADDING = 24
     }
 
     private val lineHeight: Int
@@ -92,6 +92,7 @@ class Editor : JComponent(),
 
     override fun keyTyped(e: KeyEvent?) {
         val c = e?.keyChar ?: return
+        if (e.isControlDown) return
 
         when (c) {
             '\b' -> backspace()
@@ -103,7 +104,16 @@ class Editor : JComponent(),
     }
 
     override fun keyPressed(e: KeyEvent?) {
-        when (e?.keyCode) {
+        if (e == null) return
+
+        if (e.keyCode == KeyEvent.VK_BACK_SPACE
+            && e.isControlDown) {
+            removeWord()
+            repaint()
+            return
+        }
+
+        when (e.keyCode) {
             KeyEvent.VK_LEFT -> moveLeft()
             KeyEvent.VK_RIGHT -> moveRight()
             KeyEvent.VK_UP -> moveUp()
@@ -167,10 +177,8 @@ class Editor : JComponent(),
     private fun insertChar(c: Char) {
         val line = lines[caretRow]
 
-        val updated =
-            line.substring(0, caretCol) +
-                    c +
-                    line.substring(caretCol)
+        val updated = line.substring(0, caretCol) + c +
+                line.substring(caretCol)
 
         lines[caretRow] = updated
         caretCol++
@@ -178,13 +186,11 @@ class Editor : JComponent(),
 
     private fun backspace() {
         if (caretRow == 0 && caretCol == 0) return
-
         val line = lines[caretRow]
 
         if (caretCol > 0) {
-            lines[caretRow] =
-                line.substring(0, caretCol - 1) +
-                        line.substring(caretCol)
+            lines[caretRow] = line.substring(0, caretCol - 1) +
+                    line.substring(caretCol)
 
             caretCol--
         } else {
@@ -195,6 +201,43 @@ class Editor : JComponent(),
             lines.removeAt(caretRow)
             caretRow--
         }
+    }
+
+    private fun removeWord() {
+
+        if (caretRow == 0 && caretCol == 0) {
+            return
+        }
+
+        val line = lines[caretRow]
+
+        if (caretCol == 0) {
+            val previous = lines[caretRow - 1]
+
+            caretCol = previous.length
+
+            lines[caretRow - 1] = previous + line
+            lines.removeAt(caretRow)
+
+            caretRow--
+
+            return
+        }
+
+        var start = caretCol
+
+        while (start > 0 && line[start - 1].isWhitespace()) {
+            start--
+        }
+
+        while (start > 0 && !line[start - 1].isWhitespace()) {
+            start--
+        }
+
+        lines[caretRow] = line.substring(0, start) +
+                line.substring(caretCol)
+
+        caretCol = start
     }
 
     private fun newLine() {
