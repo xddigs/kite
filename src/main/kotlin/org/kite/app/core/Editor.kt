@@ -19,12 +19,14 @@ class Editor : JComponent(),
 
     private var scrollY = 0
 
+    private val lineHeight: Int
+        get() = getFontMetrics(FontManager.JETBRAINS_MONO).height
+
     companion object {
         const val PADDING = 24
     }
+    var onCaretMoved: ((Int, Int) -> Unit)? = null
 
-    private val lineHeight: Int
-        get() = getFontMetrics(FontManager.JETBRAINS_MONO).height
 
     init {
         isFocusable = true
@@ -120,6 +122,7 @@ class Editor : JComponent(),
             KeyEvent.VK_DOWN -> moveDown()
         }
 
+        updateCaret()
         repaint()
     }
 
@@ -148,6 +151,7 @@ class Editor : JComponent(),
 
         caretCol = caretCol.coerceIn(0, line.length)
 
+        updateCaret()
         repaint()
     }
 
@@ -182,6 +186,7 @@ class Editor : JComponent(),
 
         lines[caretRow] = updated
         caretCol++
+        updateCaret()
     }
 
     private fun backspace() {
@@ -201,6 +206,8 @@ class Editor : JComponent(),
             lines.removeAt(caretRow)
             caretRow--
         }
+
+        updateCaret()
     }
 
     private fun removeWord() {
@@ -251,6 +258,7 @@ class Editor : JComponent(),
 
         caretRow++
         caretCol = 0
+        updateCaret()
     }
 
     private fun moveLeft() {
@@ -287,6 +295,10 @@ class Editor : JComponent(),
                 lines[caretRow].length
             )
         }
+    }
+
+    private fun updateCaret() {
+        onCaretMoved?.invoke(caretRow, caretCol)
     }
 
     fun setLines(newLines: MutableList<String>) {
