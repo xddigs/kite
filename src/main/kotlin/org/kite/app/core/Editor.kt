@@ -6,7 +6,7 @@ import java.awt.*
 import java.awt.event.*
 import javax.swing.JComponent
 
-class CodeEditor : JComponent(),
+class Editor : JComponent(),
     KeyListener,
     MouseListener,
     MouseMotionListener,
@@ -20,7 +20,7 @@ class CodeEditor : JComponent(),
     private var scrollY = 0
 
     companion object {
-        const val PADDING = 8
+        const val PADDING = 16
     }
 
     private val lineHeight: Int
