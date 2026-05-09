@@ -1,6 +1,7 @@
 package org.kite.app.core
 
 import org.kite.app.ui.EditorTheme
+import org.kite.app.ui.FontManager
 import java.awt.*
 import java.awt.event.*
 import javax.swing.JComponent
@@ -19,9 +20,11 @@ class CodeEditor : JComponent(),
     private var scrollY = 0
 
     companion object {
-        const val LINE_HEIGHT = 18
         const val PADDING = 8
     }
+
+    private val lineHeight: Int
+        get() = getFontMetrics(FontManager.JETBRAINS_MONO).height
 
     init {
         isFocusable = true
@@ -35,30 +38,55 @@ class CodeEditor : JComponent(),
 
     override fun paintComponent(g: Graphics) {
         super.paintComponent(g)
-
         val g2 = g as Graphics2D
-        g2.font = Font("Monospaced", Font.PLAIN, 16)
+
+        g2.setRenderingHint(
+            RenderingHints.KEY_TEXT_ANTIALIASING,
+            RenderingHints.VALUE_TEXT_ANTIALIAS_ON
+        )
+
+        g2.setRenderingHint(
+            RenderingHints.KEY_ANTIALIASING,
+            RenderingHints.VALUE_ANTIALIAS_ON
+        )
+
+        g2.setRenderingHint(
+            RenderingHints.KEY_RENDERING,
+            RenderingHints.VALUE_RENDER_QUALITY
+        )
+
+        g2.font = FontManager.JETBRAINS_MONO
+
+        val metrics = g2.fontMetrics
 
         var y = PADDING - scrollY
 
         for (i in lines.indices) {
             val line = lines[i]
 
+            val baseline = y + metrics.ascent
+
             g2.color = EditorTheme.TEXT_COLOR
-            g2.drawString(line, PADDING, y + LINE_HEIGHT)
+            g2.drawString(line, PADDING, baseline)
 
             if (i == caretRow) {
-                val caretX = PADDING + g2.fontMetrics.stringWidth(
-                    line.substring(0, caretCol.coerceAtMost(
-                        line.length))
-                )
+
+                val safeCol = caretCol.coerceAtMost(line.length)
+
+                val caretX = PADDING +
+                        metrics.stringWidth(line.substring(0, safeCol))
 
                 g2.color = EditorTheme.CURSOR_COLOR
-                g2.drawLine(caretX, y, caretX,
-                    y + LINE_HEIGHT)
+
+                g2.drawLine(
+                    caretX,
+                    baseline - metrics.ascent,
+                    caretX,
+                    baseline + metrics.descent
+                )
             }
 
-            y += LINE_HEIGHT
+            y += metrics.height
         }
     }
 
@@ -92,13 +120,11 @@ class CodeEditor : JComponent(),
 
         requestFocus()
 
-        val y = (e.y + scrollY) / LINE_HEIGHT
+        val y = (e.y + scrollY) / lineHeight
         caretRow = y.coerceIn(0, lines.size - 1)
 
         val line = lines[caretRow]
-
-        val fontMetrics = getFontMetrics(
-            Font("Monospaced", Font.PLAIN, 16))
+        val fontMetrics = getFontMetrics(FontManager.JETBRAINS_MONO)
 
         var x = PADDING
         caretCol = 0
@@ -132,7 +158,7 @@ class CodeEditor : JComponent(),
     override fun mouseWheelMoved(e: MouseWheelEvent?) {
         if (e == null) return
 
-        scrollY += e.wheelRotation * LINE_HEIGHT
+        scrollY += e.wheelRotation * lineHeight
         scrollY = scrollY.coerceAtLeast(0)
 
         repaint()
@@ -206,7 +232,8 @@ class CodeEditor : JComponent(),
         if (caretRow > 0) {
             caretRow--
             caretCol = caretCol.coerceAtMost(
-                lines[caretRow].length)
+                lines[caretRow].length
+            )
         }
     }
 
@@ -214,7 +241,23 @@ class CodeEditor : JComponent(),
         if (caretRow < lines.size - 1) {
             caretRow++
             caretCol = caretCol.coerceAtMost(
-                lines[caretRow].length)
+                lines[caretRow].length
+            )
         }
+    }
+
+    fun setLines(newLines: MutableList<String>) {
+        lines.clear()
+        lines.addAll(newLines)
+
+        caretRow = 0
+        caretCol = 0
+        scrollY = 0
+
+        repaint()
+    }
+
+    fun getLines(): List<String> {
+        return lines
     }
 }
