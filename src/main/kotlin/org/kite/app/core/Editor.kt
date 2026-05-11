@@ -17,7 +17,7 @@ class Editor : JComponent(),
     private var caretRow = 0
     private var caretCol = 0
 
-    private var scrollY = 0
+    internal var scrollY = 0
 
     private val lineHeight: Int
         get() = getFontMetrics(FontManager.JETBRAINS_MONO).height
@@ -25,8 +25,9 @@ class Editor : JComponent(),
     companion object {
         const val PADDING = 24
     }
-    var onCaretMoved: ((Int, Int) -> Unit)? = null
 
+    var onCaretMoved: ((Int, Int) -> Unit)? = null
+    var onContentChanged: (() -> Unit)? = null
 
     init {
         isFocusable = true
@@ -95,6 +96,7 @@ class Editor : JComponent(),
     override fun keyTyped(e: KeyEvent?) {
         val c = e?.keyChar ?: return
         if (e.isControlDown) return
+        if (e.keyChar.code == KeyEvent.VK_ESCAPE) return
 
         when (c) {
             '\b' -> backspace()
@@ -208,6 +210,7 @@ class Editor : JComponent(),
         }
 
         updateCaret()
+        onContentChanged?.invoke()
     }
 
     private fun removeWord() {
@@ -259,6 +262,7 @@ class Editor : JComponent(),
         caretRow++
         caretCol = 0
         updateCaret()
+        onContentChanged?.invoke()
     }
 
     private fun moveLeft() {

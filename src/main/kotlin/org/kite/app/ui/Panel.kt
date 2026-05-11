@@ -11,12 +11,19 @@ class Panel : JPanel() {
         background = EditorTheme.BACKGROUND_COLOR
         val editor = Editor()
         val statusBar = StatusBar()
+        val lineNumbers = LineNumbers(editor)
 
         editor.onCaretMoved = { row, col ->
             statusBar.setCaretPosition(row, col)
         }
 
+
+        editor.onContentChanged = {
+            lineNumbers.repaint()
+        }
+
         add(editor, BorderLayout.CENTER)
         add(statusBar, BorderLayout.SOUTH)
+        add(lineNumbers, BorderLayout.WEST)
     }
 }
