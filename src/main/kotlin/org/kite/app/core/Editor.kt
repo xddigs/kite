@@ -17,6 +17,10 @@ class Editor : JComponent(),
     private var caretRow = 0
     private var caretCol = 0
 
+    private var anchorRow = 0
+    private var anchorCol = 0
+    private var isSelecting = false
+
     internal var scrollY = 0
 
     private val lineHeight: Int
@@ -66,8 +70,30 @@ class Editor : JComponent(),
 
         for (i in lines.indices) {
             val line = lines[i]
-
             val baseline = y + metrics.ascent
+
+            val start = getSelectionStart()
+            val end = getSelectionEnd()
+
+            if (i >= start.first && i <= end.first) {
+                val lineStart = if (i == start.first) start.second else 0
+                val lineEnd = if (i == end.first) end.second else line.length
+
+                val xStart = PADDING + metrics.stringWidth(
+                    line.substring(0, lineStart))
+
+                val xEnd = PADDING + metrics.stringWidth(
+                    line.substring(0, lineEnd))
+
+                g2.color = EditorTheme.SELECTION_COLOR
+                g2.fillRect(xStart, y, xEnd - xStart,
+                    metrics.height)
+
+                if (i < end.first) {
+                    g2.fillRect(xEnd, y, 10,
+                        metrics.height)
+                }
+            }
 
             g2.color = EditorTheme.TEXT_COLOR
             g2.drawString(line, PADDING, baseline)
@@ -303,6 +329,24 @@ class Editor : JComponent(),
 
     private fun updateCaret() {
         onCaretMoved?.invoke(caretRow, caretCol)
+    }
+
+    private fun getSelectionStart(): Pair<Int, Int> {
+        return if (caretRow < anchorRow || (caretRow == anchorRow &&
+                    caretCol < anchorCol)) {
+            caretRow to caretCol
+        } else {
+            anchorRow to anchorCol
+        }
+    }
+
+    private fun getSelectionEnd(): Pair<Int, Int> {
+        return if (caretRow > anchorRow || (caretRow == anchorRow &&
+                    caretCol > anchorCol)) {
+            caretRow to caretCol
+        } else {
+            anchorRow to anchorCol
+        }
     }
 
     fun setLines(newLines: MutableList<String>) {
