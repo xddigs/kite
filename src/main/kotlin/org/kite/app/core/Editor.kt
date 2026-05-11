@@ -19,7 +19,7 @@ class Editor : JComponent(),
 
     private var anchorRow = 0
     private var anchorCol = 0
-    private var isSelecting = false
+    private var hasSelection = false
 
     internal var scrollY = 0
 
@@ -36,7 +36,7 @@ class Editor : JComponent(),
     init {
         isFocusable = true
         background = EditorTheme.BACKGROUND_COLOR
-
+        focusTraversalKeysEnabled = false
         addKeyListener(this)
         addMouseListener(this)
         addMouseMotionListener(this)
@@ -72,26 +72,41 @@ class Editor : JComponent(),
             val line = lines[i]
             val baseline = y + metrics.ascent
 
-            val start = getSelectionStart()
-            val end = getSelectionEnd()
+            if (hasSelection) {
+                val start = getSelectionStart()
+                val end = getSelectionEnd()
 
-            if (i >= start.first && i <= end.first) {
-                val lineStart = if (i == start.first) start.second else 0
-                val lineEnd = if (i == end.first) end.second else line.length
+                if (i >= start.first && i <= end.first) {
 
-                val xStart = PADDING + metrics.stringWidth(
-                    line.substring(0, lineStart))
+                    val lineStart =
+                        if (i == start.first) start.second else 0
 
-                val xEnd = PADDING + metrics.stringWidth(
-                    line.substring(0, lineEnd))
+                    val lineEnd =
+                        if (i == end.first) end.second else line.length
 
-                g2.color = EditorTheme.SELECTION_COLOR
-                g2.fillRect(xStart, y, xEnd - xStart,
-                    metrics.height)
+                    val xStart = PADDING +
+                            metrics.stringWidth(line.substring(0, lineStart))
 
-                if (i < end.first) {
-                    g2.fillRect(xEnd, y, 10,
-                        metrics.height)
+                    val xEnd = PADDING +
+                            metrics.stringWidth(line.substring(0, lineEnd))
+
+                    g2.color = EditorTheme.SELECTION_COLOR
+
+                    g2.fillRect(
+                        xStart,
+                        y,
+                        xEnd - xStart,
+                        metrics.height
+                    )
+
+                    if (i < end.first) {
+                        g2.fillRect(
+                            xEnd,
+                            y,
+                            10,
+                            metrics.height
+                        )
+                    }
                 }
             }
 
@@ -123,10 +138,12 @@ class Editor : JComponent(),
         val c = e?.keyChar ?: return
         if (e.isControlDown) return
         if (e.keyChar.code == KeyEvent.VK_ESCAPE) return
+        if (e.keyChar.code == KeyEvent.VK_DELETE) return
 
         when (c) {
             '\b' -> backspace()
             '\n' -> newLine()
+            '\t' -> tab()
             else -> insertChar(c)
         }
 
@@ -139,6 +156,13 @@ class Editor : JComponent(),
         if (e.keyCode == KeyEvent.VK_BACK_SPACE
             && e.isControlDown) {
             removeWord()
+            repaint()
+            return
+        }
+
+        if (e.keyCode == KeyEvent.VK_DELETE
+            && hasSelection) {
+            removeSelection()
             repaint()
             return
         }
@@ -158,33 +182,21 @@ class Editor : JComponent(),
 
     override fun mouseClicked(e: MouseEvent?) {
         if (e == null) return
-
         requestFocus()
-
-        val y = (e.y + scrollY) / lineHeight
-        caretRow = y.coerceIn(0, lines.size - 1)
-
-        val line = lines[caretRow]
-        val fontMetrics = getFontMetrics(FontManager.JETBRAINS_MONO)
-
-        var x = PADDING
-        caretCol = 0
-
-        for (i in line.indices) {
-            val charWidth = fontMetrics.charWidth(line[i])
-            if (x + charWidth / 2 > e.x) break
-            x += charWidth
-            caretCol++
-        }
-
-        caretCol = caretCol.coerceIn(0, line.length)
-
+        hasSelection = false
+        moveToMouse(e)
         updateCaret()
         repaint()
     }
 
     override fun mousePressed(e: MouseEvent?) {
+        if (e == null) return
         requestFocus()
+        hasSelection = false
+        moveToMouse(e)
+        anchorRow = caretRow
+        anchorCol = caretCol
+        repaint()
     }
 
     override fun mouseReleased(e: MouseEvent?) {}
@@ -192,7 +204,11 @@ class Editor : JComponent(),
     override fun mouseExited(e: MouseEvent?) {}
 
     override fun mouseDragged(e: MouseEvent?) {
-        mouseClicked(e)
+        if (e == null) return
+        hasSelection = true
+        moveToMouse(e)
+        updateCaret()
+        repaint()
     }
 
     override fun mouseMoved(e: MouseEvent?) {}
@@ -207,6 +223,12 @@ class Editor : JComponent(),
     }
 
     private fun insertChar(c: Char) {
+        if (hasSelection) {
+            removeSelection()
+            return
+        }
+
+        hasSelection = false
         val line = lines[caretRow]
 
         val updated = line.substring(0, caretCol) + c +
@@ -218,6 +240,12 @@ class Editor : JComponent(),
     }
 
     private fun backspace() {
+        if (hasSelection) {
+            removeSelection()
+            return
+        }
+
+        hasSelection = false
         if (caretRow == 0 && caretCol == 0) return
         val line = lines[caretRow]
 
@@ -239,8 +267,58 @@ class Editor : JComponent(),
         onContentChanged?.invoke()
     }
 
-    private fun removeWord() {
+    private fun removeSelection() {
 
+        if (!hasSelection) {
+            return
+        }
+
+        val start = getSelectionStart()
+        val end = getSelectionEnd()
+
+        val startRow = start.first
+        val startCol = start.second
+
+        val endRow = end.first
+        val endCol = end.second
+
+        if (startRow == endRow) {
+            val line = lines[startRow]
+
+            lines[startRow] =
+                line.substring(0, startCol) +
+                        line.substring(endCol)
+
+        } else {
+
+            val firstPart =
+                lines[startRow].substring(0, startCol)
+
+            val lastPart =
+                lines[endRow].substring(endCol)
+
+            lines[startRow] = firstPart + lastPart
+
+            for (i in endRow downTo startRow + 1) {
+                lines.removeAt(i)
+            }
+        }
+
+        caretRow = startRow
+        caretCol = startCol
+
+        anchorRow = startRow
+        anchorCol = startCol
+
+        hasSelection = false
+
+        updateCaret()
+        onContentChanged?.invoke()
+
+        repaint()
+    }
+
+    private fun removeWord() {
         if (caretRow == 0 && caretCol == 0) {
             return
         }
@@ -277,6 +355,11 @@ class Editor : JComponent(),
     }
 
     private fun newLine() {
+        if (hasSelection) {
+            removeSelection()
+            return
+        }
+
         val line = lines[caretRow]
 
         val left = line.substring(0, caretCol)
@@ -287,6 +370,22 @@ class Editor : JComponent(),
 
         caretRow++
         caretCol = 0
+        updateCaret()
+        onContentChanged?.invoke()
+    }
+
+    private fun tab() {
+
+        if (hasSelection) {
+            removeSelection()
+            return
+        }
+
+        val line = lines[caretRow]
+        val left = line.substring(0, caretCol)
+        val right = line.substring(caretCol)
+        lines[caretRow] = "$left    $right"
+        caretCol += 4
         updateCaret()
         onContentChanged?.invoke()
     }
@@ -333,7 +432,8 @@ class Editor : JComponent(),
 
     private fun getSelectionStart(): Pair<Int, Int> {
         return if (caretRow < anchorRow || (caretRow == anchorRow &&
-                    caretCol < anchorCol)) {
+                    caretCol < anchorCol)
+        ) {
             caretRow to caretCol
         } else {
             anchorRow to anchorCol
@@ -342,11 +442,37 @@ class Editor : JComponent(),
 
     private fun getSelectionEnd(): Pair<Int, Int> {
         return if (caretRow > anchorRow || (caretRow == anchorRow &&
-                    caretCol > anchorCol)) {
+                    caretCol > anchorCol)
+        ) {
             caretRow to caretCol
         } else {
             anchorRow to anchorCol
         }
+    }
+
+    private fun moveToMouse(e: MouseEvent) {
+        val y = (e.y + scrollY) / lineHeight
+        caretRow = y.coerceIn(0, lines.size - 1)
+
+        val line = lines[caretRow]
+
+        val metrics = getFontMetrics(FontManager.JETBRAINS_MONO)
+
+        var x = PADDING
+        caretCol = 0
+
+        for (i in line.indices) {
+            val charWidth = metrics.charWidth(line[i])
+
+            if (x + charWidth / 2 > e.x) {
+                break
+            }
+
+            x += charWidth
+            caretCol++
+        }
+
+        caretCol = caretCol.coerceIn(0, line.length)
     }
 
     fun setLines(newLines: MutableList<String>) {
