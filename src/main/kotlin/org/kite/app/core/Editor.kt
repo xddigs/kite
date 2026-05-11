@@ -23,6 +23,9 @@ class Editor : JComponent(),
 
     internal var scrollY = 0
 
+    private val tabSize = 4
+    private val useTabs = false
+
     private val lineHeight: Int
         get() = getFontMetrics(FontManager.JETBRAINS_MONO).height
 
@@ -381,11 +384,13 @@ class Editor : JComponent(),
             return
         }
 
+        val tabText = if (useTabs) "\t" else " ".repeat(tabSize)
         val line = lines[caretRow]
         val left = line.substring(0, caretCol)
         val right = line.substring(caretCol)
-        lines[caretRow] = "$left    $right"
-        caretCol += 4
+
+        lines[caretRow] = left + tabText + right
+        caretCol += tabText.length
         updateCaret()
         onContentChanged?.invoke()
     }
