@@ -94,7 +94,6 @@ class Editor : JComponent(),
                             metrics.stringWidth(line.substring(0, lineEnd))
 
                     g2.color = EditorTheme.SELECTION_COLOR
-
                     g2.fillRect(
                         xStart,
                         y,
@@ -110,11 +109,35 @@ class Editor : JComponent(),
                             metrics.height
                         )
                     }
+
+                    // Paint selected text with background color for high contrast
+                    g2.color = EditorTheme.BACKGROUND_COLOR
+                    val selectedText = line.substring(lineStart, lineEnd)
+                    g2.drawString(selectedText, xStart, baseline)
                 }
             }
 
+            // Paint non-selected text
             g2.color = EditorTheme.TEXT_COLOR
-            g2.drawString(line, PADDING, baseline)
+            val start = if (hasSelection) getSelectionStart() else null
+            val end = if (hasSelection) getSelectionEnd() else null
+
+            if (start != null && end != null && i >= start.first && i <= end.first) {
+                val lineStart = if (i == start.first) start.second else 0
+                val lineEnd = if (i == end.first) end.second else line.length
+
+                // Draw text before selection
+                if (lineStart > 0) {
+                    g2.drawString(line.substring(0, lineStart), PADDING, baseline)
+                }
+                // Draw text after selection
+                if (lineEnd < line.length) {
+                    val xAfter = PADDING + metrics.stringWidth(line.substring(0, lineEnd))
+                    g2.drawString(line.substring(lineEnd), xAfter, baseline)
+                }
+            } else {
+                g2.drawString(line, PADDING, baseline)
+            }
 
             if (i == caretRow) {
 
@@ -171,10 +194,22 @@ class Editor : JComponent(),
         }
 
         when (e.keyCode) {
-            KeyEvent.VK_LEFT -> moveLeft()
-            KeyEvent.VK_RIGHT -> moveRight()
-            KeyEvent.VK_UP -> moveUp()
-            KeyEvent.VK_DOWN -> moveDown()
+            KeyEvent.VK_LEFT -> {
+                hasSelection = false
+                moveLeft()
+            }
+            KeyEvent.VK_RIGHT -> {
+                hasSelection = false
+                moveRight()
+            }
+            KeyEvent.VK_UP -> {
+                hasSelection = false
+                moveUp()
+            }
+            KeyEvent.VK_DOWN -> {
+                hasSelection = false
+                moveDown()
+            }
         }
 
         updateCaret()
@@ -228,7 +263,6 @@ class Editor : JComponent(),
     private fun insertChar(c: Char) {
         if (hasSelection) {
             removeSelection()
-            return
         }
 
         hasSelection = false
@@ -360,7 +394,6 @@ class Editor : JComponent(),
     private fun newLine() {
         if (hasSelection) {
             removeSelection()
-            return
         }
 
         val line = lines[caretRow]
@@ -381,7 +414,6 @@ class Editor : JComponent(),
 
         if (hasSelection) {
             removeSelection()
-            return
         }
 
         val tabText = if (useTabs) "\t" else " ".repeat(tabSize)
