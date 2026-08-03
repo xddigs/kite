@@ -13,4 +13,7 @@ object EditorTheme {
     val KEYWORD_COLOR = Color(142, 95, 241)
     val STRING_COLOR = Color(0, 219, 174)
     val COMMENT_COLOR = Color(87, 166, 74)
+
+    val BAR_BACKGROUND = Color(30, 32, 48) // A tad darker than BACKGROUND_COLOR
+    val TAB_ACTIVE_COLOR = BACKGROUND_COLOR
 }

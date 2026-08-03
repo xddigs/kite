@@ -13,6 +13,8 @@ class Editor : JComponent(),
     MouseWheelListener {
 
     private val lines = mutableListOf("")
+    var currentFile: java.io.File? = null
+        private set
 
     private var caretRow = 0
     private var caretCol = 0
@@ -196,11 +198,11 @@ class Editor : JComponent(),
         when (e.keyCode) {
             KeyEvent.VK_LEFT -> {
                 hasSelection = false
-                moveLeft()
+                if (e.isControlDown) moveWordLeft() else moveLeft()
             }
             KeyEvent.VK_RIGHT -> {
                 hasSelection = false
-                moveRight()
+                if (e.isControlDown) moveWordRight() else moveRight()
             }
             KeyEvent.VK_UP -> {
                 hasSelection = false
@@ -274,6 +276,7 @@ class Editor : JComponent(),
         lines[caretRow] = updated
         caretCol++
         updateCaret()
+        onContentChanged?.invoke()
     }
 
     private fun backspace() {
@@ -371,7 +374,7 @@ class Editor : JComponent(),
             lines.removeAt(caretRow)
 
             caretRow--
-
+            onContentChanged?.invoke()
             return
         }
 
@@ -389,6 +392,7 @@ class Editor : JComponent(),
                 line.substring(caretCol)
 
         caretCol = start
+        onContentChanged?.invoke()
     }
 
     private fun newLine() {
@@ -436,6 +440,27 @@ class Editor : JComponent(),
         }
     }
 
+    private fun moveWordLeft() {
+        if (caretCol == 0) {
+            if (caretRow > 0) {
+                caretRow--
+                caretCol = lines[caretRow].length
+            }
+            return
+        }
+
+        val line = lines[caretRow]
+        var col = caretCol
+
+        while (col > 0 && line[col - 1].isWhitespace()) {
+            col--
+        }
+        while (col > 0 && !line[col - 1].isWhitespace()) {
+            col--
+        }
+        caretCol = col
+    }
+
     private fun moveRight() {
         if (caretCol < lines[caretRow].length) {
             caretCol++
@@ -443,6 +468,26 @@ class Editor : JComponent(),
             caretRow++
             caretCol = 0
         }
+    }
+
+    private fun moveWordRight() {
+        val line = lines[caretRow]
+        if (caretCol == line.length) {
+            if (caretRow < lines.size - 1) {
+                caretRow++
+                caretCol = 0
+            }
+            return
+        }
+
+        var col = caretCol
+        while (col < line.length && line[col].isWhitespace()) {
+            col++
+        }
+        while (col < line.length && !line[col].isWhitespace()) {
+            col++
+        }
+        caretCol = col
     }
 
     private fun moveUp() {
@@ -512,18 +557,30 @@ class Editor : JComponent(),
         caretCol = caretCol.coerceIn(0, line.length)
     }
 
-    fun setLines(newLines: MutableList<String>) {
+    fun setLines(newLines: MutableList<String>, file: java.io.File?) {
         lines.clear()
         lines.addAll(newLines)
+        currentFile = file
 
         caretRow = 0
         caretCol = 0
         scrollY = 0
 
+        onContentChanged?.invoke()
         repaint()
     }
 
-    fun getLines(): List<String> {
-        return lines
+    fun getLines(): List<String> = lines
+
+    fun saveAs(file: java.io.File) {
+        FileManager.save(file, lines)
+        currentFile = file
+        onContentChanged?.invoke()
+    }
+
+    fun save() {
+        currentFile?.let {
+            FileManager.save(it, lines)
+        }
     }
 }
