@@ -7,6 +7,7 @@ import java.awt.FlowLayout
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
+import kotlin.system.exitProcess
 
 class MenuBar(private val editor: Editor, private val frame: JFrame) : JPanel() {
 
@@ -49,7 +50,7 @@ class MenuBar(private val editor: Editor, private val frame: JFrame) : JPanel() 
         val openItem = createMenuItem("Open") { openFile() }
         val saveItem = createMenuItem("Save") { saveFile() }
         val saveAsItem = createMenuItem("Save As") { saveFileAs() }
-        val exitItem = createMenuItem("Exit") { System.exit(0) }
+        val exitItem = createMenuItem("Exit") { exitProcess(0) }
 
         menu.add(openItem)
         menu.add(saveItem)
