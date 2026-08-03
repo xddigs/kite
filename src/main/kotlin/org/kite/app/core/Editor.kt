@@ -52,6 +52,9 @@ class Editor : JComponent(),
         super.paintComponent(g)
         val g2 = g as Graphics2D
 
+        g2.color = background
+        g2.fillRect(0, 0, width, height)
+
         g2.setRenderingHint(
             RenderingHints.KEY_TEXT_ANTIALIASING,
             RenderingHints.VALUE_TEXT_ANTIALIAS_ON
@@ -138,20 +141,10 @@ class Editor : JComponent(),
             }
 
             if (i == caretRow) {
-
                 val safeCol = caretCol.coerceAtMost(line.length)
-
-                val caretX = PADDING +
-                        metrics.stringWidth(line.substring(0, safeCol))
-
+                val caretX = PADDING + metrics.stringWidth(line.substring(0, safeCol))
                 g2.color = EditorTheme.CURSOR_COLOR
-
-                g2.drawLine(
-                    caretX,
-                    baseline - metrics.ascent,
-                    caretX,
-                    baseline + metrics.descent
-                )
+                g2.fillRect(caretX, y, 2, metrics.height)
             }
 
             y += metrics.height
@@ -207,6 +200,11 @@ class Editor : JComponent(),
             KeyEvent.VK_DOWN -> {
                 hasSelection = false
                 moveDown()
+            }
+            KeyEvent.VK_S -> {
+                if (e.isControlDown) {
+                    save()
+                }
             }
         }
 
@@ -574,9 +572,16 @@ class Editor : JComponent(),
         onContentChanged?.invoke()
     }
 
+    var onSaveRequested: (() -> Unit)? = null
+
     fun save() {
+        if (currentFile == null) {
+            onSaveRequested?.invoke()
+            return
+        }
         currentFile?.let {
             FileManager.save(it, lines)
+            onContentChanged?.invoke()
         }
     }
 }

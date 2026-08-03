@@ -2,14 +2,17 @@ package org.kite.app.ui
 
 import org.kite.app.core.Editor
 import org.kite.app.core.FileManager
-import java.awt.Dimension
-import java.awt.FlowLayout
+import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
 import kotlin.system.exitProcess
 
-class MenuBar(private val editor: Editor, private val frame: JFrame) : JPanel() {
+class MenuBar(private var editor: Editor, private val frame: JFrame) : JPanel() {
+
+    fun updateEditor(newEditor: Editor) {
+        this.editor = newEditor
+    }
 
     init {
         layout = FlowLayout(FlowLayout.LEFT, 10, 5)
@@ -92,8 +95,29 @@ class MenuBar(private val editor: Editor, private val frame: JFrame) : JPanel() 
         return item
     }
 
+    private fun stylizeFileChooser(chooser: JFileChooser) {
+        chooser.background = EditorTheme.BAR_BACKGROUND
+        chooser.foreground = EditorTheme.TEXT_COLOR
+        
+        fun applyTheme(container: Container) {
+            for (c in container.components) {
+                c.background = EditorTheme.BAR_BACKGROUND
+                c.foreground = EditorTheme.TEXT_COLOR
+                c.font = FontManager.JETBRAINS_MONO
+                if (c is JComponent && c !is JViewport) {
+                    c.border = BorderFactory.createEmptyBorder()
+                }
+                if (c is Container) {
+                    applyTheme(c)
+                }
+            }
+        }
+        applyTheme(chooser)
+    }
+
     fun openFile() {
         val chooser = JFileChooser()
+        stylizeFileChooser(chooser)
         if (chooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
             val file = chooser.selectedFile
             val lines = FileManager.load(file)
@@ -111,6 +135,7 @@ class MenuBar(private val editor: Editor, private val frame: JFrame) : JPanel() 
 
     fun saveFileAs() {
         val chooser = JFileChooser()
+        stylizeFileChooser(chooser)
         if (chooser.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
             val file = chooser.selectedFile
             editor.saveAs(file)
