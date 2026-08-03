@@ -75,6 +75,7 @@ class Editor : JComponent(),
         val metrics = g2.fontMetrics
 
         var y = PADDING - scrollY
+        val extension = currentFile?.extension
 
         for (i in lines.indices) {
             val line = lines[i]
@@ -121,23 +122,35 @@ class Editor : JComponent(),
                 }
             }
 
-            g2.color = EditorTheme.TEXT_COLOR
-            val start = if (hasSelection) getSelectionStart() else null
-            val end = if (hasSelection) getSelectionEnd() else null
+            val tokens = Highlighter.tokenize(line, extension)
+            var currentX = PADDING
 
-            if (start != null && end != null && i >= start.first && i <= end.first) {
-                val lineStart = if (i == start.first) start.second else 0
-                val lineEnd = if (i == end.first) end.second else line.length
+            val selStart = if (hasSelection) getSelectionStart() else null
+            val selEnd = if (hasSelection) getSelectionEnd() else null
 
-                if (lineStart > 0) {
-                    g2.drawString(line.substring(0, lineStart), PADDING, baseline)
+            var charIndex = 0
+            for (token in tokens) {
+                val tokenLength = token.text.length
+
+                if (selStart != null && selEnd != null && i >= selStart.first && i <= selEnd.first) {
+                    val lineSelStart = if (i == selStart.first) selStart.second else 0
+                    val lineSelEnd = if (i == selEnd.first) selEnd.second else line.length
+                    var localX = currentX
+                    for (char in token.text) {
+                        if (charIndex in lineSelStart..<lineSelEnd) {
+                        } else {
+                            g2.color = Highlighter.getColor(token.type)
+                            g2.drawString(char.toString(), localX, baseline)
+                        }
+                        localX += metrics.charWidth(char)
+                        charIndex++
+                    }
+                } else {
+                    g2.color = Highlighter.getColor(token.type)
+                    g2.drawString(token.text, currentX, baseline)
+                    charIndex += tokenLength
                 }
-                if (lineEnd < line.length) {
-                    val xAfter = PADDING + metrics.stringWidth(line.substring(0, lineEnd))
-                    g2.drawString(line.substring(lineEnd), xAfter, baseline)
-                }
-            } else {
-                g2.drawString(line, PADDING, baseline)
+                currentX += metrics.stringWidth(token.text)
             }
 
             if (i == caretRow) {
