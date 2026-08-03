@@ -41,8 +41,6 @@ class TabBar(private val editor: Editor) : JPanel() {
     }
 
     fun closeCurrentTab() {
-        // Since we only have one tab for now as per instructions "the tabs", 
-        // closing it will just reset the editor
         editor.setLines(mutableListOf(""), null)
     }
 }

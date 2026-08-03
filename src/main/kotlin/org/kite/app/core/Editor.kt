@@ -112,14 +112,12 @@ class Editor : JComponent(),
                         )
                     }
 
-                    // Paint selected text with background color for high contrast
                     g2.color = EditorTheme.BACKGROUND_COLOR
                     val selectedText = line.substring(lineStart, lineEnd)
                     g2.drawString(selectedText, xStart, baseline)
                 }
             }
 
-            // Paint non-selected text
             g2.color = EditorTheme.TEXT_COLOR
             val start = if (hasSelection) getSelectionStart() else null
             val end = if (hasSelection) getSelectionEnd() else null
@@ -128,11 +126,9 @@ class Editor : JComponent(),
                 val lineStart = if (i == start.first) start.second else 0
                 val lineEnd = if (i == end.first) end.second else line.length
 
-                // Draw text before selection
                 if (lineStart > 0) {
                     g2.drawString(line.substring(0, lineStart), PADDING, baseline)
                 }
-                // Draw text after selection
                 if (lineEnd < line.length) {
                     val xAfter = PADDING + metrics.stringWidth(line.substring(0, lineEnd))
                     g2.drawString(line.substring(lineEnd), xAfter, baseline)
