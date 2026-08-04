@@ -75,82 +75,44 @@ class Editor : JComponent(),
         val metrics = g2.fontMetrics
 
         var y = PADDING - scrollY
-        val extension = currentFile?.extension
 
         for (i in lines.indices) {
             val line = lines[i]
             val baseline = y + metrics.ascent
 
+            val extension = currentFile?.extension
+            val tokens = Highlighter.tokenize(line, extension)
+
             if (hasSelection) {
                 val start = getSelectionStart()
                 val end = getSelectionEnd()
 
-                if (i >= start.first && i <= end.first) {
+                if (i in start.first..end.first) {
+                    val lineStart = if (i == start.first) start.second else 0
+                    val lineEnd = if (i == end.first) end.second else line.length
 
-                    val lineStart =
-                        if (i == start.first) start.second else 0
-
-                    val lineEnd =
-                        if (i == end.first) end.second else line.length
-
-                    val xStart = PADDING +
-                            metrics.stringWidth(line.substring(0, lineStart))
-
-                    val xEnd = PADDING +
-                            metrics.stringWidth(line.substring(0, lineEnd))
+                    val xStart = PADDING + metrics.stringWidth(line.substring(0, lineStart))
+                    val xEnd = PADDING + metrics.stringWidth(line.substring(0, lineEnd))
 
                     g2.color = EditorTheme.SELECTION_COLOR
-                    g2.fillRect(
-                        xStart,
-                        y,
-                        xEnd - xStart,
-                        metrics.height
-                    )
+                    g2.fillRect(xStart, y, xEnd - xStart, metrics.height)
 
                     if (i < end.first) {
-                        g2.fillRect(
-                            xEnd,
-                            y,
-                            10,
-                            metrics.height
-                        )
+                        g2.fillRect(xEnd, y, 10, metrics.height)
                     }
-
-                    g2.color = EditorTheme.BACKGROUND_COLOR
-                    val selectedText = line.substring(lineStart, lineEnd)
-                    g2.drawString(selectedText, xStart, baseline)
                 }
             }
 
-            val tokens = Highlighter.tokenize(line, extension)
             var currentX = PADDING
-
-            val selStart = if (hasSelection) getSelectionStart() else null
-            val selEnd = if (hasSelection) getSelectionEnd() else null
-
-            var charIndex = 0
             for (token in tokens) {
-                val tokenLength = token.text.length
-
-                if (selStart != null && selEnd != null && i >= selStart.first && i <= selEnd.first) {
-                    val lineSelStart = if (i == selStart.first) selStart.second else 0
-                    val lineSelEnd = if (i == selEnd.first) selEnd.second else line.length
-                    var localX = currentX
-                    for (char in token.text) {
-                        if (charIndex in lineSelStart..<lineSelEnd) {
-                        } else {
-                            g2.color = Highlighter.getColor(token.type)
-                            g2.drawString(char.toString(), localX, baseline)
-                        }
-                        localX += metrics.charWidth(char)
-                        charIndex++
-                    }
-                } else {
-                    g2.color = Highlighter.getColor(token.type)
-                    g2.drawString(token.text, currentX, baseline)
-                    charIndex += tokenLength
-                }
+                g2.color = Highlighter.getColor(token.type)
+                g2.drawString(token.text, currentX, baseline)
                 currentX += metrics.stringWidth(token.text)
+            }
+
+            if (tokens.isEmpty() && line.isNotEmpty()) {
+                g2.color = EditorTheme.TEXT_COLOR
+                g2.drawString(line, PADDING, baseline)
             }
 
             if (i == caretRow) {
