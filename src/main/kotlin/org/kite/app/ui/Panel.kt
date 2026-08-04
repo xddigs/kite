@@ -25,14 +25,17 @@ class Panel(private val frame: JFrame) : JPanel() {
                 val lineNumbers = components.filterIsInstance<LineNumbers>().firstOrNull()
                 lineNumbers?.repaint()
                 val fileName = editor.currentFile?.name ?: "Untitled"
-                tabBar.updateTabName(editors.indexOf(editor), fileName)
+                val extension = editor.currentFile?.extension
+                tabBar.updateTabName(editors.indexOf(editor), fileName, extension)
                 if (editor == editors[currentEditorIndex]) {
                     frame.title = "$fileName - Kite"
                 }
             }
 
             editor.onSaveRequested = {
-                val topPanel = components.filter { it is JPanel && it !is TabBar && it !is MenuBar && it !is StatusBar }.firstOrNull() as? JPanel
+                val topPanel =
+                    components.firstOrNull { it is JPanel && it !is TabBar
+                            && it !is MenuBar && it !is StatusBar } as? JPanel
                 val menuBar = if (topPanel != null) {
                     topPanel.components.filterIsInstance<MenuBar>().firstOrNull()
                 } else {
@@ -59,7 +62,7 @@ class Panel(private val frame: JFrame) : JPanel() {
         add(statusBar, BorderLayout.SOUTH)
         add(lineNumbers, BorderLayout.WEST)
 
-        val inputMap = getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+        val inputMap = getInputMap(WHEN_IN_FOCUSED_WINDOW)
         val actionMap = actionMap
 
         inputMap.put(KeyStroke.getKeyStroke("control S"), "save")
@@ -89,7 +92,8 @@ class Panel(private val frame: JFrame) : JPanel() {
         editors.add(newEditor)
 
         val statusBar = components.filterIsInstance<StatusBar>().first()
-        val topPanel = components.filter { it is JPanel && it !is TabBar && it !is MenuBar && it !is StatusBar }.firstOrNull() as? JPanel
+        val topPanel =
+            components.firstOrNull { it is JPanel && it !is TabBar && it !is MenuBar && it !is StatusBar } as? JPanel
         val tabBar = if (topPanel != null) {
             topPanel.components.filterIsInstance<TabBar>().firstOrNull()
         } else {
@@ -104,14 +108,16 @@ class Panel(private val frame: JFrame) : JPanel() {
             val lineNumbers = components.filterIsInstance<LineNumbers>().firstOrNull()
             lineNumbers?.repaint()
             val fileName = newEditor.currentFile?.name ?: "Untitled"
-            tabBar?.updateTabName(editors.indexOf(newEditor), fileName)
+            val extension = newEditor.currentFile?.extension
+            tabBar?.updateTabName(editors.indexOf(newEditor), fileName, extension)
             if (newEditor == editors[currentEditorIndex]) {
                 frame.title = "$fileName - Kite"
             }
         }
 
         newEditor.onSaveRequested = {
-            val topPanel2 = components.filter { it is JPanel && it !is TabBar && it !is MenuBar && it !is StatusBar }.firstOrNull() as? JPanel
+            val topPanel2 =
+                components.firstOrNull { it is JPanel && it !is TabBar && it !is MenuBar && it !is StatusBar } as? JPanel
             val menuBar = if (topPanel2 != null) {
                 topPanel2.components.filterIsInstance<MenuBar>().firstOrNull()
             } else {
@@ -120,7 +126,7 @@ class Panel(private val frame: JFrame) : JPanel() {
             menuBar?.saveFile()
         }
 
-        tabBar?.addTab("Untitled")
+        tabBar?.addTab("Untitled", null)
         switchToTab(editors.size - 1)
     }
 
@@ -141,7 +147,12 @@ class Panel(private val frame: JFrame) : JPanel() {
         val newLineNumbers = LineNumbers(newEditor)
         add(newLineNumbers, BorderLayout.WEST)
 
-        val topPanel = components.filter { it is JPanel && it !is TabBar && it !is MenuBar && it !is StatusBar && it !is Editor && it !is LineNumbers }.firstOrNull() as? JPanel
+        val topPanel =
+            components.firstOrNull {
+                @Suppress("USELESS_IS_CHECK")
+                it is JPanel && it !is TabBar && it !is MenuBar && it !is
+                        StatusBar && it !is Editor && it !is LineNumbers
+            } as? JPanel
         val menuBar = if (topPanel != null) {
             topPanel.components.filterIsInstance<MenuBar>().firstOrNull()
         } else {
@@ -160,13 +171,14 @@ class Panel(private val frame: JFrame) : JPanel() {
     fun closeTab(index: Int) {
         if (editors.size <= 1) {
             editors[0].setLines(mutableListOf(""), null)
-            val topPanel = components.filter { it is JPanel && it !is TabBar && it !is MenuBar && it !is StatusBar }.firstOrNull() as? JPanel
+            val topPanel = components.firstOrNull { it is JPanel && it !is
+                    TabBar && it !is MenuBar && it !is StatusBar } as? JPanel
             val tabBar = if (topPanel != null) {
                 topPanel.components.filterIsInstance<TabBar>().firstOrNull()
             } else {
                 components.filterIsInstance<TabBar>().firstOrNull()
             }
-            tabBar?.updateTabName(0, "Untitled")
+            tabBar?.updateTabName(0, "Untitled", null)
             return
         }
 
