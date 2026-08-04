@@ -1,13 +1,12 @@
 package org.kite.app.ui
 
-import org.kite.app.core.Editor
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.*
+import kotlin.system.exitProcess
 
 class TabBar(private val panel: Panel) : JPanel() {
-
     private val tabLabels = mutableListOf<JLabel>()
     private var activeTabIndex = 0
     private val tabContainer = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0))
@@ -67,14 +66,7 @@ class TabBar(private val panel: Panel) : JPanel() {
             override fun mousePressed(e: MouseEvent) {
                 val index = tabLabels.indexOf(label)
                 if (SwingUtilities.isRightMouseButton(e)) {
-                    panel.closeTab(index)
-                    tabLabels.removeAt(index)
-                    tabContainer.remove(label)
-                    if (activeTabIndex >= tabLabels.size) {
-                        activeTabIndex = tabLabels.size - 1
-                    }
-                    revalidate()
-                    repaint()
+                    closeTabAt(index)
                 } else {
                     activeTabIndex = index
                     panel.switchToTab(index)
@@ -114,14 +106,29 @@ class TabBar(private val panel: Panel) : JPanel() {
         }
     }
 
-    fun closeCurrentTab() {
-        panel.closeTab(activeTabIndex)
-        val label = tabLabels.removeAt(activeTabIndex)
+    fun closeTabAt(index: Int) {
+        if (index !in tabLabels.indices) return
+
+        panel.closeTab(index)
+        val label = tabLabels.removeAt(index)
         tabContainer.remove(label)
+
+        if (tabLabels.isEmpty()) {
+            exitProcess(0)
+        }
+
         if (activeTabIndex >= tabLabels.size) {
             activeTabIndex = tabLabels.size - 1
+        } else if (index < activeTabIndex) {
+            activeTabIndex--
         }
+
+        panel.switchToTab(activeTabIndex)
         revalidate()
         repaint()
+    }
+
+    fun closeCurrentTab() {
+        closeTabAt(activeTabIndex)
     }
 }
